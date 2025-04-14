@@ -1,0 +1,50 @@
+{
+  "name": "sprout-space",
+  "version": "1.0.0",
+  "description": "A MERN stack Web App for planning a garden plot.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npm i && npm run build && npm run start:dev",
+    "start": "npm run client:build && npm run server",
+    "start:dev": "concurrently \"npm run server:dev\" \"wait-on tcp:3001 && npm run client:dev\"",
+    "server": "cd server && npm start",
+    "server:build": "cd server && npm run build",
+    "server:dev": "cd server && npm run dev",
+    "install": "cd server && npm i && cd ../client && npm i",
+    "client:build": "cd client && npm run build",
+    "client:dev": "cd client && npm run dev",
+    "build": "npm run server:build && npm run client:build",
+    "seed": "cd server && npm run seed",
+    "seed-user": "cd server && npm run seed-user",
+    "render-build": "npm install && npm run server:build && npm run client:build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/M-Dearlove/Sprout-Space.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/M-Dearlove/Sprout-Space/issues"
+  },
+  "homepage": "https://github.com/M-Dearlove/Sprout-Space#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^5.1.0",
+    "react-router": "^7.4.1",
+    "react-router-dom": "^7.4.1",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.3"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/react-router-dom": "^5.3.3",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.1",
+    "wait-on": "^8.0.3"
+  }
+}

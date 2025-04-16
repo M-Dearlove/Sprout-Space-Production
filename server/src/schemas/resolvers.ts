@@ -18,6 +18,70 @@ import {
 import { IResolvers } from '@graphql-tools/utils';
 import { searchPerenualPlants } from '../utils/perenualAPI.js';
 
+const storePerenualPlantsInDb = async (plants: any[]) => {
+  try {
+    // Process plants in batches to avoid overwhelming the database
+    const batchSize = 5;
+    const batches = [];
+    
+    for (let i = 0; i < plants.length; i += batchSize) {
+      batches.push(plants.slice(i, i + batchSize));
+    }
+    
+    for (const batch of batches) {
+      // Process each batch sequentially
+      await Promise.all(batch.map(async (plant) => {
+        // Add debug logs
+        console.log('-----DEBUG: PLANT STORAGE-----');
+        console.log(`Checking if plant exists: ${plant.plantName}`);
+        console.log(`Looking for perenualId: "${plant.perenualId}"`);
+        
+        // Check if the plant already exists by perenualId instead of _id
+        const existingPlant = await Plant.findOne({ perenualId: plant.perenualId });
+        
+        // Log the result of the lookup
+        console.log(`Existing plant found?: ${existingPlant ? 'YES' : 'NO'}`);
+        if (existingPlant) {
+          console.log(`Existing plant details: ${existingPlant.plantName}, perenualId: ${existingPlant.perenualId}`);
+        }
+        
+        if (!existingPlant) {
+          // Create a new plant document - just call await without storing the result
+          await Plant.create({
+            perenualId: plant.perenualId, // Use the new field
+            plantName: plant.plantName,
+            plantType: plant.plantType,
+            plantDescription: plant.plantDescription,
+            plantImage: plant.plantImage,
+            plantWatering: plant.plantWatering,
+            plantLight: plant.plantLight,
+            plantSoil: plant.plantSoil,
+            plantFertilizer: plant.plantFertilizer,
+            plantHumidity: plant.plantHumidity,
+            plantTemperature: plant.plantTemperature,
+            plantToxicity: plant.plantToxicity,
+            plantPests: plant.plantPests,
+            plantDiseases: plant.plantDiseases,
+            spacing: plant.spacing,
+            plantsPerSquareFoot: plant.plantsPerSquareFoot,
+            color: plant.color
+          });
+          console.log(`Stored new plant: ${plant.plantName} with perenualId: ${plant.perenualId}`);
+        } else {
+          console.log(`Skipping duplicate: ${plant.plantName}`);
+        }
+        console.log('----------------------------');
+      }));
+      
+      // Add a small delay between batches to avoid database overload
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  } catch (error) {
+    console.error('Error storing Perenual plants in database:', error);
+    // Don't throw the error - we want the search to continue even if storage fails
+  }
+};
+
 const resolvers: IResolvers = {
   User: {
     createdAt: (parent: any) => {
@@ -167,14 +231,13 @@ const resolvers: IResolvers = {
       }
     },
     
-    // Moved searchPlants inside Query object where it belongs
     searchPlants: async (_parent: any, { searchTerm, limit = 8 }: { searchTerm: string, limit?: number }) => {
       try {
         // First search your database
         const dbResults = await Plant.find({
           plantName: { $regex: new RegExp(searchTerm, 'i') }
         }).limit(limit || 8);
-    
+        
         // If no results or limited results, supplement with Perenual API
         if (dbResults.length < limit) {
           const perenualResults = await searchPerenualPlants(searchTerm, limit - dbResults.length);
@@ -186,15 +249,29 @@ const resolvers: IResolvers = {
             return dbResults;
           }
           
-          return [...dbResults, ...perenualResults];
+          // Store the Perenual results in the database
+          if (Array.isArray(perenualResults) && perenualResults.length > 0) {
+            // Store and retrieve actual database documents with proper _id fields
+            await storePerenualPlantsInDb(perenualResults);
+            
+            // Fetch the just-stored plants from DB to get proper MongoDB _id values
+            const storedPerenualIds = perenualResults.map(p => p.perenualId);
+            const freshDbResults = await Plant.find({
+              perenualId: { $in: storedPerenualIds }
+            });
+            
+            return [...dbResults, ...freshDbResults];
+          }
+          
+          return dbResults;
         }
-    
+        
         return dbResults;
       } catch (error) {
         console.error('Error searching plants:', error);
         throw new Error('Failed to search plants');
       }
-    },
+    }
   },
 
   Mutation: {

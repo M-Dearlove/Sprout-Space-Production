@@ -3,6 +3,7 @@ import { Schema, model, Document } from 'mongoose';
 
 
 interface IPlant extends Document {
+    perenualId?: string;
     plantName: string;
     plantType: string;
     plantDescription: string;
@@ -23,6 +24,10 @@ interface IPlant extends Document {
 
 const plantSchema = new Schema<IPlant>(
 {
+    perenualId: {
+        type: String,
+        index: true
+    },
     plantName: {
         type: String,
         required: true,
